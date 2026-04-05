@@ -1,0 +1,84 @@
+from django.conf import settings
+from django.db import models
+
+
+class Category(models.Model):
+    """
+    Blog post category (e.g., Technology, Lifestyle, Education, Travel).
+
+    Fields:
+    - name: CharField, max_length=100, unique=True
+    - slug: SlugField, max_length=120, unique=True
+    - description: TextField, blank=True, null=True
+    - created_at: DateTimeField, auto_now_add=True
+    - updated_at: DateTimeField, auto_now=True
+
+    __str__ returns: self.name
+    Meta: ordering = ['name']
+    """
+    pass
+
+
+class Tag(models.Model):
+    """
+    Tag for categorizing posts (e.g., python, django, api).
+
+    Fields:
+    - name: CharField, max_length=50, unique=True
+    - slug: SlugField, max_length=70, unique=True
+    - created_at: DateTimeField, auto_now_add=True
+
+    __str__ returns: self.name
+    Meta: ordering = ['name']
+    """
+    pass
+
+
+class Post(models.Model):
+    """
+    Represents a blog post.
+
+    Fields:
+    - author: ForeignKey → settings.AUTH_USER_MODEL, on_delete=CASCADE, related_name='posts'
+    - category: ForeignKey → Category, on_delete=SET_NULL, null=True, blank=True, related_name='posts'
+    - tags: ManyToManyField → Tag, blank=True, related_name='posts'
+    - title: CharField, max_length=255
+    - slug: SlugField, max_length=280, unique=True
+    - content: TextField (main blog content)
+    - excerpt: TextField, max_length=500, blank=True, null=True (short summary)
+    - cover_image: ImageField, upload_to='posts/covers/', blank=True, null=True
+    - status: CharField with choices (draft / published / archived), default='draft'
+    - is_featured: BooleanField, default=False
+    - views_count: PositiveIntegerField, default=0
+    - published_at: DateTimeField, blank=True, null=True
+    - created_at: DateTimeField, auto_now_add=True
+    - updated_at: DateTimeField, auto_now=True
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('published', 'Published'),
+        ('archived', 'Archived'),
+    ]
+
+    __str__ returns: self.title
+    Meta: ordering = ['-created_at']
+    """
+
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='posts',
+    )
+    category = models.ForeignKey(
+        'Category',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='posts',
+    )
+    tags = models.ManyToManyField(
+        'Tag',
+        blank=True,
+        related_name='posts',
+    )
+
