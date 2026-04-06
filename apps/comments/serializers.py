@@ -1,6 +1,13 @@
 from rest_framework import serializers
 
 from apps.comments.models import Comment, Like
+from apps.users.serializers import User
+
+
+class CommentAuthorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username']
 
 
 class CommentCreateSerializer(serializers.ModelSerializer):
@@ -11,7 +18,20 @@ class CommentCreateSerializer(serializers.ModelSerializer):
     - author is automatically set from request.user
     - Validate that parent comment belongs to the same post (if provided)
     """
-    pass
+
+    class Meta:
+        model = Comment
+        fields = ['post', 'parent', 'content']
+
+    def validate(self, data):
+        parent = data.get('parent')
+        post = data.get('post')
+
+        if parent and parent.post != post:
+            raise serializers.ValidationError(
+                "Parent comment must belong to the same post"
+            )
+        return data
 
 
 class CommentListSerializer(serializers.ModelSerializer):
@@ -23,7 +43,21 @@ class CommentListSerializer(serializers.ModelSerializer):
     - replies = serializers.SerializerMethodField()
     - get_replies: return child comments (where parent=self)
     """
-    pass
+    author = CommentAuthorSerializer(read_only=True)
+
+    replies = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Comment
+        fields = [
+            'id', 'post', 'author', 'parent', 'content',
+            'is_approved', 'replies', 'created_at',
+        ]
+
+    def get_replies(self, obj):
+
+        get_reply = obj.replies.filter(is_approved=True)
+        return CommentListSerializer(get_reply, many=True).data
 
 
 class CommentUpdateSerializer(serializers.ModelSerializer):
@@ -32,7 +66,10 @@ class CommentUpdateSerializer(serializers.ModelSerializer):
     Model: Comment
     Fields: content
     """
-    pass
+
+    class Meta:
+        model = Comment
+        fields = ['content']
 
 
 class LikeSerializer(serializers.ModelSerializer):
@@ -44,5 +81,15 @@ class LikeSerializer(serializers.ModelSerializer):
     - user is automatically set from request.user
     - Validate that user hasn't already liked the post
     """
-    pass
+
+    class Meta:
+        model = Like
+        fields = ['id', 'post', 'user', 'created_at']
+        read_only_fields = ['id', 'user', 'created_at']
+
+    def validate(self, data):
+        request = self.context.get('request')
+        if Like.objects.filter(post=data['post'], user=request.user).exists():
+            raise serializers.ValidationError("You have already liked this post.")
+        return data
 

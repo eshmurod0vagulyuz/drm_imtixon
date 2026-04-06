@@ -16,7 +16,17 @@ class Category(models.Model):
     __str__ returns: self.name
     Meta: ordering = ['name']
     """
-    pass
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=120, unique=True)  # URL uchun qulay ko'rinish
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)  # Yaratilgan vaqt
+    updated_at = models.DateTimeField(auto_now=True)  # O'zgartirilgan vaqt
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
 
 
 class Tag(models.Model):
@@ -31,7 +41,15 @@ class Tag(models.Model):
     __str__ returns: self.name
     Meta: ordering = ['name']
     """
-    pass
+    name = models.CharField(max_length=50, unique=True)
+    slug = models.SlugField(max_length=70, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
 
 
 class Post(models.Model):
@@ -64,6 +82,12 @@ class Post(models.Model):
     Meta: ordering = ['-created_at']
     """
 
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('published', 'Published'),
+        ('archived', 'Archived'),
+    ]
+
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -81,4 +105,21 @@ class Post(models.Model):
         blank=True,
         related_name='posts',
     )
+    title = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=280, unique=True)
+    content = models.TextField()
+    excerpt = models.TextField(max_length=500, blank=True, null=True)  # Qisqa xulosa
+    cover_image = models.ImageField(upload_to='posts/covers/', blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    is_featured = models.BooleanField(default=False)
+    views_count = models.PositiveIntegerField(default=0)
+    published_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        ordering = ['-created_at']
 

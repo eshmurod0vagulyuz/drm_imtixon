@@ -1,5 +1,6 @@
 from rest_framework.generics import ListCreateAPIView, ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from apps.permissions import IsAuthorOrReadOnly
@@ -29,7 +30,47 @@ class PostViewSet(ModelViewSet):
     - perform_create: set author = request.user
     - retrieve: increment views_count by 1 on each GET
     """
-    pass
+    queryset = Post.objects.all()
+    filterset_fields = ['category', 'status', 'is_featured', 'author']
+    search_fields = ['title', 'content', 'excerpt']
+    ordering_fields = ['created_at', 'published_at', 'views_count', 'title']
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return PostListSerializer
+        elif self.action == 'retrieve':
+            return PostDetailSerializer
+        return PostCreateUpdateSerializer
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        elif self.action == 'create':
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsAuthorOrReadOnly()]
+
+    def get_queryset(self):
+        user = self.request.user
+        if self.action == 'list':
+            if not user.is_authenticated:
+                return Post.objects.filter(status='published')
+            from django.db.models import Q
+            return Post.objects.filter(
+                Q(author=user) | Q(status='published')
+            ).distinct()
+        return Post.objects.all()
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        Post.objects.filter(pk=instance.pk).update(
+            views_count=instance.views_count + 1
+        )
+        instance.refresh_from_db()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
 
 class CategoryListCreateAPIView(ListCreateAPIView):
@@ -41,7 +82,13 @@ class CategoryListCreateAPIView(ListCreateAPIView):
     - serializer_class: CategorySerializer
     - permission_classes: AllowAny for GET, IsAdminUser for POST
     """
-    pass
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAdminUser()]
 
 
 class TagListCreateAPIView(ListCreateAPIView):
@@ -53,7 +100,13 @@ class TagListCreateAPIView(ListCreateAPIView):
     - serializer_class: TagSerializer
     - permission_classes: AllowAny for GET, IsAdminUser for POST
     """
-    pass
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAdminUser()]
 
 
 class MyPostsListAPIView(ListAPIView):
@@ -64,5 +117,9 @@ class MyPostsListAPIView(ListAPIView):
     - permission_classes: [IsAuthenticated]
     - get_queryset: filter by request.user
     """
-    pass
+    serializer_class = PostListSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Post.objects.filter(author=self.request.user)
 

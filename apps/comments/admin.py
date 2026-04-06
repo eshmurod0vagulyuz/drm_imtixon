@@ -11,7 +11,11 @@ class CommentAdmin(admin.ModelAdmin):
     list_filter: is_approved, created_at
     search_fields: content, author__username, post__title
     """
-    pass
+
+    class CommentAdmin(admin.ModelAdmin):
+        list_display = ['id', 'author', 'post', 'parent', 'is_approved', 'created_at']
+        list_filter = ['is_approved', 'created_at']
+        search_fields = ['content', 'author__username', 'post__title']
 
 
 @admin.register(Like)
@@ -21,5 +25,8 @@ class LikeAdmin(admin.ModelAdmin):
     list_display: id, user, post, created_at
     search_fields: user__username, post__title
     """
-    pass
+
+    class LikeAdmin(admin.ModelAdmin):
+        list_display = ['id', 'user', 'post', 'created_at']
+        search_fields = ['user__username', 'post__title']
 

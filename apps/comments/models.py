@@ -39,6 +39,16 @@ class Comment(models.Model):
         blank=True,
         related_name='replies',
     )
+    content = models.TextField()
+    is_approved = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Comment by {self.author.username} on {self.post.title}"
+
+    class Meta:
+        ordering = ['-created_at']
 
 
 class Like(models.Model):
@@ -66,4 +76,12 @@ class Like(models.Model):
         on_delete=models.CASCADE,
         related_name='likes',
     )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} liked {self.post.title}"
+
+    class Meta:
+        unique_together = ['post', 'user']
+        ordering = ['-created_at']
 
